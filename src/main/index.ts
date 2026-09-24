@@ -56,6 +56,7 @@ import { initCompletionWatcher } from './realtimeCompletionWatcher';
 import type { TaskCard, InboxMessage } from './realtimeCompletionWatcher';
 import { TelemetryCollector } from './telemetry';
 import { CostLedgerTotals } from './costLifetime';
+import { UsageLimitTracker } from './usageLimitTracker';
 import { analytics, isRendererMessageSurface } from './analytics';
 import type { SpawnFailReason } from './analytics';
 import { IntegrationBroker } from './integrationBroker';
@@ -253,6 +254,11 @@ const telemetry = new TelemetryCollector({
   // D11: scopes the transcript fallback to this agent's own session instead of
   // summing every transcript in a (routinely shared) cwd.
   resolveSessionId: (agentId) => hive.lastSession(agentId)
+});
+const usageLimitTracker = new UsageLimitTracker(hive);
+telemetry.onAgentUsage((sample) => {
+  const provider = hive.registry().agents[sample.agentId]?.provider || 'default';
+  usageLimitTracker.recordUsage(sample, provider);
 });
 // Usage provider (Seam 1) — the INTEGRATION swap: Oscar's telemetry collector (#7)
 // IS the provider, replacing Lane A's interim StubUsageProvider. Same
