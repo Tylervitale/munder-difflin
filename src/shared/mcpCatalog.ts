@@ -105,6 +105,14 @@ export const MCP_CATALOG: McpCatalogEntry[] = [
     tier: 'safe-readonly',
     defaultEnabled: true
   },
+  {
+    id: 'windows',
+    label: 'Windows OS',
+    description: 'Control and interact with the Windows OS.',
+    spec: { command: 'uvx', args: ['windows-mcp'] },
+    tier: 'safe-readonly',
+    defaultEnabled: true
+  },
 
   // ─── Write / secret — shipped OFF, consent-gated ──────────────────────────
   {
