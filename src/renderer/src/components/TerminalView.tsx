@@ -53,7 +53,7 @@ export function TerminalView({ initialLines = [], feed = [] }: TerminalViewProps
       lineHeight: 1.0,
       cursorBlink: true,
       cursorStyle: 'block',
-      scrollback: 5000,
+      scrollback: 500000,
       convertEol: true,
       // Keep text legible on any program-set background colour (WCAG AA).
       // See terminalPool.ts for the full rationale.
