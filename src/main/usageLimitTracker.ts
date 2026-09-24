@@ -2,15 +2,7 @@ import { AgentUsageSample } from './usage';
 import type { HiveManager } from './hive';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-
-// Providers and their token usage limits (hypothetical default token limits for now, as provider sets them)
-const PROVIDER_LIMITS: Record<string, { fiveHour: number, weekly: number }> = {
-  claude: { fiveHour: 1000000, weekly: 10000000 },
-  codex: { fiveHour: 500000, weekly: 5000000 },
-  gemini: { fiveHour: 800000, weekly: 8000000 },
-  cursor: { fiveHour: 500000, weekly: 5000000 },
-  default: { fiveHour: 500000, weekly: 5000000 }
-};
+import { readConfig } from './config';
 
 interface AgentLimitState {
   usageHistory: { ts: number, tokens: number }[];
@@ -49,8 +41,14 @@ export class UsageLimitTracker {
     }
   }
 
+  private saveStateTimeout: NodeJS.Timeout | null = null;
+
   private saveState() {
-    if (this.persistPath) {
+    if (!this.persistPath) return;
+    if (this.saveStateTimeout) return;
+    this.saveStateTimeout = setTimeout(() => {
+      this.saveStateTimeout = null;
+      if (!this.persistPath) return;
       try {
         const data: Record<string, AgentLimitState> = {};
         for (const [key, val] of this.agentStates.entries()) {
@@ -60,7 +58,7 @@ export class UsageLimitTracker {
       } catch (err) {
         console.error('Failed to save usage limits state', err);
       }
-    }
+    }, 5000);
   }
 
   public recordUsage(sample: AgentUsageSample, provider: string) {
@@ -77,7 +75,14 @@ export class UsageLimitTracker {
     state.lastUsage = tokens;
 
     if (delta > 0) {
-      state.usageHistory.push({ ts, tokens: delta });
+      // Bucket by hour to avoid massive arrays
+      const hourTs = Math.floor(ts / 3600000) * 3600000;
+      const lastBucket = state.usageHistory[state.usageHistory.length - 1];
+      if (lastBucket && lastBucket.ts === hourTs) {
+        lastBucket.tokens += delta;
+      } else {
+        state.usageHistory.push({ ts: hourTs, tokens: delta });
+      }
     }
 
     // Clean up history older than 7 days
@@ -85,7 +90,9 @@ export class UsageLimitTracker {
     state.usageHistory = state.usageHistory.filter(h => h.ts >= sevenDaysAgo);
 
     this.checkLimits(sample.agentId, provider, ts);
-    this.saveState();
+    if (delta > 0) {
+      this.saveState();
+    }
   }
 
   private getAgentState(agentId: string): AgentLimitState {
@@ -97,7 +104,8 @@ export class UsageLimitTracker {
 
   private checkLimits(agentId: string, provider: string, now: number) {
     const state = this.getAgentState(agentId);
-    const limits = PROVIDER_LIMITS[provider] || PROVIDER_LIMITS.default;
+    const cfg = readConfig();
+    const limits = cfg.usageLimits?.[provider] || cfg.usageLimits?.default || { fiveHour: 500000, weekly: 5000000 };
 
     const fiveHoursAgo = now - 5 * 60 * 60 * 1000;
     let fiveHourUsage = 0;

@@ -4,6 +4,7 @@ import { SchedulesSection } from './SchedulesSection';
 import { ContextSection } from './ContextSection';
 import { WebhooksSection } from './WebhooksSection';
 import { OrgSection } from './OrgSection';
+import { UsageLimitsSection } from './UsageLimitsSection';
 import { Muted, Scroll, TriggerCard } from './ui';
 
 /**
@@ -23,6 +24,7 @@ export function TriggersTab() {
   const [contextSummary, setContextSummary] = useState('');
   const [webhooksSummary, setWebhooksSummary] = useState('');
   const [orgSummary, setOrgSummary] = useState('');
+  const [usageSummary, setUsageSummary] = useState('');
 
   return (
     <Scroll>
@@ -60,6 +62,14 @@ export function TriggersTab() {
         summary={orgSummary}
       >
         <OrgSection onSummary={setOrgSummary} />
+      </TriggerCard>
+
+      <TriggerCard
+        title="Usage Limits"
+        blurb="Adjust agent usage limits for proactive warning triggers"
+        summary={usageSummary}
+      >
+        <UsageLimitsSection onSummary={setUsageSummary} />
       </TriggerCard>
     </Scroll>
   );

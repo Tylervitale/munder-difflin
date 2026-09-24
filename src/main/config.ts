@@ -248,6 +248,8 @@ export interface HarnessConfig {
    *  budget, which sums all kinds). Set from each agent's card in the Command
    *  Center. */
   agentTokenCaps?: Record<string, number>;
+  /** Usage limits for warnings, tracking 5h and weekly token limits per provider */
+  usageLimits?: Record<string, { fiveHour: number, weekly: number }>;
   /** Agent ids whose automatic inbox/queue delivery is paused. Pending messages
    *  stay durable until the operator explicitly resumes delivery. */
   autoDeliveryPausedAgents?: string[];
@@ -453,6 +455,7 @@ const DEFAULTS: HarnessConfig = {
   slackEnabled: false,
   slackSigningSecret: undefined,
   slackBotToken: undefined,
+  usageLimits: { default: { fiveHour: 500000, weekly: 5000000 } },
   slackChannelId: undefined,
   slackPort: undefined,
   slackProactivePosting: false,
