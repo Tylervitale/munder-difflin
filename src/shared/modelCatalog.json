@@ -108,6 +108,12 @@
       { "id": "claude-opus-4-8-high", "label": "Opus 4.8 1M", "minAppVersion": null, "maxAppVersion": null },
       { "id": "claude-sonnet-5-thinking-high", "label": "Sonnet 5 1M Thinking", "minAppVersion": null, "maxAppVersion": null }
     ],
-    "custom": []
+    "custom": [],
+    "nvidia": [
+      { "label": "CLI default (auto)", "minAppVersion": null, "maxAppVersion": null },
+      { "id": "nvidia/llama-3.1-nemotron-70b-instruct", "label": "Nemotron 70B Instruct", "minAppVersion": null, "maxAppVersion": null },
+      { "id": "meta/llama-3.1-70b-instruct", "label": "Llama 3.1 70B", "minAppVersion": null, "maxAppVersion": null },
+      { "id": "meta/llama-3.1-405b-instruct", "label": "Llama 3.1 405B", "minAppVersion": null, "maxAppVersion": null }
+    ]
   }
 }

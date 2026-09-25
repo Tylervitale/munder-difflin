@@ -401,7 +401,8 @@ const BACKEND_KEY_ENV: Record<string, string> = {
   openai: 'OPENAI_API_KEY',
   google: 'GEMINI_API_KEY',
   openrouter: 'OPENROUTER_API_KEY',
-  groq: 'GROQ_API_KEY'
+  groq: 'GROQ_API_KEY',
+  nvidia: 'NVIDIA_API_KEY'
 };
 const providerKeyRef = (backend: string): string => `apikey:${backend}`;
 
@@ -2743,9 +2744,11 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
   // proxy forwards to their endpoint (Ollama/LM Studio/vLLM). Set on process.env BEFORE
   // ensureAgent reads it. (Crush's baseUrlEnv is an inert sentinel used ONLY as this
   // upstream source; its real routing is the per-agent CRUSH_GLOBAL_CONFIG base_url.)
-  if (opts.hive && (provider === 'crush' || provider === 'qwen')) {
+  if (opts.hive && (provider === 'crush' || provider === 'qwen' || provider === 'nvidia')) {
     const bridge = providerPreset(provider).bridge;
-    const baseUrl = readConfig().providerBaseUrls?.[provider];
+    const baseUrl = provider === 'nvidia'
+      ? 'https://integrate.api.nvidia.com/v1'
+      : readConfig().providerBaseUrls?.[provider];
     if (bridge && bridge.kind === 'proxy' && baseUrl) process.env[bridge.baseUrlEnv] = baseUrl;
   }
   // If the agent carries hive metadata, provision its workspace and add
@@ -2946,7 +2949,7 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
   // the local-LLM path, a per-provider base URL. Keys are write-only in the broker
   // (read MAIN-ONLY here, never logged); base URLs ride HarnessConfig. Claude/codex
   // use their own login, so they skip this. Pam guardrails #3/#4/#5.
-  if (opts.hive && (provider === 'opencode' || provider === 'crush' || provider === 'pi' || provider === 'qwen')) {
+  if (opts.hive && (provider === 'opencode' || provider === 'crush' || provider === 'pi' || provider === 'qwen' || provider === 'nvidia')) {
     const cfg = readConfig();
     const extra: Record<string, string> = {};
     // 1) BYOK keys — LEAST-PRIVILEGE (Pam/Jim NIT-2): inject ONLY the key for the
@@ -2957,7 +2960,7 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
     const modelSlug = modelIdx >= 0 ? (opts.args?.[modelIdx + 1] ?? '') : '';
     const prefix = modelSlug.includes('/') ? modelSlug.split('/')[0].toLowerCase() : '';
     const PREFIX_BACKEND: Record<string, string> = {
-      anthropic: 'anthropic', openai: 'openai', google: 'google', gemini: 'google', groq: 'groq', openrouter: 'openrouter'
+      anthropic: 'anthropic', openai: 'openai', google: 'google', gemini: 'google', groq: 'groq', openrouter: 'openrouter', nvidia: 'nvidia'
     };
     const scoped = PREFIX_BACKEND[prefix];
     const backends = scoped ? [scoped] : Object.keys(BACKEND_KEY_ENV);
@@ -2968,6 +2971,12 @@ async function spawnAgentCore(opts: AgentSpawnOptions, owner: Electron.WebConten
       // OpenCode/AI-SDK's Google provider reads GOOGLE_GENERATIVE_AI_API_KEY, not
       // GEMINI_API_KEY — inject both so google/* authenticates (Jim NIT #1).
       if (backend === 'google') extra.GOOGLE_GENERATIVE_AI_API_KEY = key;
+
+      // If the provider is nvidia, also inject it as OPENAI_API_KEY so the proxy CLI (qwen) uses it
+      // since the proxy relies on the CLI doing OpenAI-compatible calls to OPENAI_BASE_URL.
+      if (backend === 'nvidia' && provider === 'nvidia') {
+        extra['OPENAI_API_KEY'] = key;
+      }
     }
     // 2) Floor auto-state for pi's bundled extension auto-allow (guardrail #5): it
     //    only auto-approves tool calls when this is '1' (i.e. floor auto mode on).
