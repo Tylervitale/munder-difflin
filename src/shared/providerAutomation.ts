@@ -146,7 +146,9 @@ const CONTEXT_COMMANDS: Record<AgentProvider, ProviderContextCommands> = {
 
   // An arbitrary user binary. We cannot know its command surface, and guessing
   // means typing slashes into someone's unknown REPL.
-  custom: NO_CONTEXT_COMMANDS
+  custom: NO_CONTEXT_COMMANDS,
+
+  nvidia: NO_CONTEXT_COMMANDS
 };
 
 /** The full context-command entry for a provider (unknown ids degrade to none). */

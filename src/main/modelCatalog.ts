@@ -33,6 +33,39 @@ export interface RemoteCatalogResult {
   stale: boolean;
 }
 
+import { request as httpsRequest } from 'node:https';
+import { getSecret } from './integrations';
+
+function fetchNvidiaModels(): Promise<string[]> {
+  return new Promise((resolve) => {
+    const key = getSecret('apikey:nvidia');
+    if (!key) return resolve([]);
+    const req = httpsRequest('https://integrate.api.nvidia.com/v1/models', {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${key}`
+      }
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          if (json && Array.isArray(json.data)) {
+            resolve(json.data.map((m: any) => m.id).filter(Boolean));
+          } else {
+            resolve([]);
+          }
+        } catch {
+          resolve([]);
+        }
+      });
+    });
+    req.on('error', () => resolve([]));
+    req.end();
+  });
+}
+
 export async function loadModelCatalog(
   cachePath: string,
   opts: { force?: boolean } = {}
@@ -56,10 +89,28 @@ export async function loadModelCatalog(
   }
 
   try {
-    const body = await getText(CATALOG_URL, { timeoutMs: 8000 });
+    const [body, nvidiaModels] = await Promise.all([
+      getText(CATALOG_URL, { timeoutMs: 8000 }),
+      fetchNvidiaModels()
+    ]);
+
     // Parse the JSON and the SHAPE separately: valid JSON that is not a catalog
     // must fall back, not reach a picker as undefined rows.
-    const catalog = parseModelCatalog(JSON.parse(body));
+    const parsedJson = JSON.parse(body);
+
+    // Auto-search and append Nvidia models to the fetched catalog.
+    if (nvidiaModels.length > 0) {
+      if (!parsedJson.providers) parsedJson.providers = {};
+      if (!parsedJson.providers.nvidia) parsedJson.providers.nvidia = [];
+      const existingIds = new Set(parsedJson.providers.nvidia.map((m: any) => m.id));
+      for (const id of nvidiaModels) {
+        if (!existingIds.has(id)) {
+          parsedJson.providers.nvidia.push({ id, label: id, minAppVersion: null, maxAppVersion: null });
+        }
+      }
+    }
+
+    const catalog = parseModelCatalog(parsedJson);
     if (!catalog) throw new Error('not a model catalog');
     const payload = { catalog, fetchedAt: Date.now() };
     try {

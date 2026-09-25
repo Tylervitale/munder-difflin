@@ -34,7 +34,8 @@ export type AgentProvider =
   | 'pi'
   | 'copilot'
   | 'cursor'
-  | 'custom';
+  | 'custom'
+  | 'nvidia';
 
 /** Structured descriptor for how a NON-hiveAware provider gets hive lifecycle
  *  events (live status + Stop→inbox-drain + cost), introduced alongside the legacy
@@ -574,6 +575,24 @@ export const AGENT_PROVIDER_PRESETS: AgentProviderPreset[] = [
     autoFlag: '',
     hiveAware: false,
     canReceiveInbox: false // no inbox-drain path → mail bounces to the god
+  },
+  {
+    // NVIDIA NIM via proxy (same approach as Qwen).
+    id: 'nvidia',
+    label: 'NVIDIA NIM',
+    defaultCommand: 'qwen', // Proxy CLI used
+    commandGroups: [],
+    autoModeFlag: '--yolo',
+    supportsModel: true,
+    modelFlag: '--model',
+    autoFlag: '--yolo',
+    hiveAware: false,
+    bridge: { kind: 'proxy', api: 'openai', baseUrlEnv: 'OPENAI_BASE_URL', inboxDelivery: 'terminal' },
+    canReceiveInbox: true,
+    initialPromptFlag: '-i',
+    recommendedOrchestratorModel: 'nvidia/llama-3.1-nemotron-70b-instruct',
+    resumeFlag: undefined,
+    installCommand: 'npm install -g qwen-code'
   }
 ];
 
@@ -591,7 +610,8 @@ export function isAgentProvider(value: unknown): value is AgentProvider {
     value === 'pi' ||
     value === 'copilot' ||
     value === 'cursor' ||
-    value === 'custom'
+    value === 'custom' ||
+    value === 'nvidia'
   );
 }
 
@@ -645,6 +665,7 @@ export function inferAgentProvider(command: string | undefined, explicit?: unkno
   // Cursor ships as `cursor-agent`; `agent` is a shorter alias (generic name — check last).
   if (bin === 'cursor-agent') return 'cursor';
   if (bin === 'agent') return 'cursor';
+  if (bin === 'nvidia') return 'nvidia';
   if (bin === 'claude' || !bin) return 'claude';
   return 'custom';
 }
