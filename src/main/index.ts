@@ -2229,7 +2229,8 @@ if (process.defaultApp) {
 // single-instance lock and forward them to the running instance. (macOS gets
 // the 'open-url' event instead.) The lock also rules out two harnesses fighting
 // over the same hive, which was previously possible but never useful.
-const gotInstanceLock = app.requestSingleInstanceLock();
+const isNewInstance = process.argv.includes('--new-instance');
+const gotInstanceLock = isNewInstance ? true : app.requestSingleInstanceLock();
 if (!gotInstanceLock) {
   allowQuit = true;
   app.quit();
@@ -2467,18 +2468,36 @@ function openFloor(): BrowserWindow | null {
  *  "New Floor" item (Cmd/Ctrl+Shift+N). */
 function installAppMenu(): void {
   const isMac = process.platform === 'darwin';
-  const newFloorItem = {
-    label: 'New Floor',
-    accelerator: 'CmdOrCtrl+Shift+N',
-    click: () => { openFloor(); }
-  };
+
+  const submenu: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: 'New Workspace Window',
+      accelerator: 'CmdOrCtrl+Shift+W',
+      click: () => {
+        spawn(process.execPath, [...process.argv.slice(1), '--new-instance'], {
+          detached: true,
+          stdio: 'ignore'
+        }).unref();
+      }
+    }
+  ];
+
+  if (readConfig().multiWindow) {
+    submenu.push({
+      label: 'New Floor',
+      accelerator: 'CmdOrCtrl+Shift+N',
+      click: () => { openFloor(); }
+    });
+  }
+
+  submenu.push({ type: 'separator' as const });
+  submenu.push(isMac ? { role: 'close' as const } : { role: 'quit' as const });
+
   const template: Electron.MenuItemConstructorOptions[] = [
     ...(isMac ? [{ role: 'appMenu' as const }] : []),
     {
       label: 'File',
-      submenu: isMac
-        ? [newFloorItem, { type: 'separator' as const }, { role: 'close' as const }]
-        : [newFloorItem, { type: 'separator' as const }, { role: 'quit' as const }]
+      submenu
     },
     // The Edit menu is spelled out rather than `{ role: 'editMenu' }` for one
     // reason: `registerAccelerator: false` on the clipboard items.
@@ -3758,6 +3777,8 @@ ipcMain.handle('history:list', (_evt, agentId: unknown, limit: unknown) =>
   ));
 ipcMain.handle('history:search', (_evt, query: unknown, limit: unknown) =>
   persist.searchHistory(typeof query === 'string' ? query : '', typeof limit === 'number' ? limit : undefined));
+
+ipcMain.handle('app:isNewInstance', () => isNewInstance);
 
 // ─── IPC: quit confirmation ─────────────────────────────────────────────────
 /** Tear the harness down and quit. Shared by the hard "kill all & quit" path
@@ -5336,9 +5357,7 @@ app.whenReady().then(() => {
   powerMonitor.on('unlock-screen', () => onSystemResume('unlock-screen'));
   powerMonitor.on('suspend', () => { lastSuspendAt = Date.now(); console.log('[power] suspend — system sleeping'); });
   powerMonitor.on('lock-screen', () => { lastSuspendAt = Date.now(); console.log('[power] lock-screen'); });
-  // Multi-window floors (opt-in): install the menu carrying "New Floor". When
-  // off, the app keeps Electron's default menu — zero behavior change.
-  if (readConfig().multiWindow) installAppMenu();
+  installAppMenu();
   createWindow();
   // Auto-start the Slack webhook server when configured. Best-effort: a tunnel
   // failure (offline) is logged, not fatal. The tunnel URL is ephemeral and

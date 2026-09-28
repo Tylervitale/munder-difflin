@@ -568,6 +568,8 @@ export interface PreservedWorktreeSnapshot {
 const api = {
   version: __APP_VERSION__,
 
+  isNewInstance: (): Promise<boolean> => ipcRenderer.invoke('app:isNewInstance'),
+
   // ─── Analytics ───────────────────────────────────────────────────────────
   /** Count ONE human-sent message (TELEMETRY.md → `message_sent`). Carries a
    *  surface name and nothing else — no text, no length, no agent id — and main
