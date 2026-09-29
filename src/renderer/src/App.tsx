@@ -72,6 +72,7 @@ export function App() {
     } catch { /* localStorage unavailable — show the picker */ }
     return false;
   });
+  const [isNewInstance, setIsNewInstance] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   /** Which tab Settings opens on. Set by a `cth:open-settings` deep link, reset
    *  to undefined (→ General) whenever the modal is opened the normal way. */
@@ -98,6 +99,14 @@ export function App() {
   // Initial config load
   useEffect(() => {
     let cancelled = false;
+
+    window.cth.isNewInstance?.().then((val) => {
+      if (!cancelled && val) {
+        setIsNewInstance(true);
+        setHiveOpened(false); // Force picker for new instance
+      }
+    });
+
     window.cth.getConfig().then(c => {
       if (cancelled) return;
       setConfig(c);
