@@ -3117,7 +3117,7 @@ ipcMain.on('app:readClipboardSync', (evt) => {
 ipcMain.handle('dialog:chooseFolder', async (evt) => {
   const win = BrowserWindow.fromWebContents(evt.sender);
   if (!win) return { ok: false as const, error: 'no window' };
-  const res = await dialog.showOpenDialog(win, {
+  const res = await dialog.showOpenDialog({
     properties: ['openDirectory', 'createDirectory'],
     title: 'Pick a folder'
   });
@@ -3708,7 +3708,7 @@ ipcMain.handle('kg:ingestFiles', (_evt, payload: unknown) => {
 ipcMain.handle('kg:addFiles', async (evt) => {
   const win = BrowserWindow.fromWebContents(evt.sender);
   if (!win) return { ok: false as const, error: 'no window' };
-  const res = await dialog.showOpenDialog(win, {
+  const res = await dialog.showOpenDialog({
     properties: ['openFile', 'multiSelections'],
     title: 'Add documents to the Knowledge Graph'
   });
@@ -3731,7 +3731,7 @@ ipcMain.handle('kg:addFiles', async (evt) => {
 ipcMain.handle('dialog:attachFiles', async (evt) => {
   const win = BrowserWindow.fromWebContents(evt.sender);
   if (!win) return { ok: false as const, error: 'no window' };
-  const res = await dialog.showOpenDialog(win, {
+  const res = await dialog.showOpenDialog({
     properties: ['openFile', 'multiSelections'],
     title: 'Attach images or files',
     filters: [
