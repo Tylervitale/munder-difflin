@@ -148,7 +148,7 @@ const CONTEXT_COMMANDS: Record<AgentProvider, ProviderContextCommands> = {
   // means typing slashes into someone's unknown REPL.
   custom: NO_CONTEXT_COMMANDS,
 
-  nvidia: NO_CONTEXT_COMMANDS
+  nvidia: { compact: "/compress", clear: "/clear", compactTakesFocus: true }
 };
 
 /** The full context-command entry for a provider (unknown ids degrade to none). */
