@@ -52,6 +52,7 @@ export class RealtimeFloorWatcher {
   start(): void {
     if (this.timer) return;
     this.timer = setInterval(() => { try { this.tick(); } catch { /* never throw from a timer */ } }, POLL_MS);
+    this.timer.unref?.();
   }
 
   stop(): void {

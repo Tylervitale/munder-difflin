@@ -549,7 +549,7 @@ export function initAutoUpdater(getWebContents: () => WebContents | null): void 
     const tick = (): void => { if (autoUpdateEnabled()) void runCheck(); };
     // First check shortly after boot (don't compete with spawn/startup I/O),
     // then every CHECK_INTERVAL_MS.
-    setTimeout(tick, 30_000);
-    setInterval(tick, CHECK_INTERVAL_MS);
+    setTimeout(tick, 30_000).unref?.();
+    setInterval(tick, CHECK_INTERVAL_MS).unref?.();
   })();
 }

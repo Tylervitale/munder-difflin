@@ -772,7 +772,9 @@ function syncMissions(): void {
     entry.timeout = setTimeout(() => {
       fire();
       entry.interval = setInterval(fire, m.intervalMs);
+      entry.interval.unref?.();
     }, remaining);
+    entry.timeout.unref?.();
     missionTimers.set(m.id, entry);
   }
 }
@@ -884,7 +886,9 @@ function syncContextTriggers(): void {
     entry.timeout = setTimeout(() => {
       fire();
       entry.interval = setInterval(fire, rule.everyMs);
+      entry.interval.unref?.();
     }, remaining);
+    entry.timeout.unref?.();
     contextTimers.set(action, entry);
   }
 }
@@ -1654,6 +1658,7 @@ function startSlackDoneObserver(): void {
   slackDoneNotified = loadSlackDoneNotified();
   slackDoneBaseline = null; // re-seed on the first tick of this session
   slackDoneTimer = setInterval(() => { void pollSlackDoneTasks(); }, 5000);
+  slackDoneTimer.unref?.();
 }
 
 /** Stop watching the kanban. Safe to call when not running. */
@@ -2058,6 +2063,7 @@ function startWebhookDoneObserver(): void {
   webhookDoneTimer = setInterval(() => {
     try { pollWebhookDoneTasks(); } catch (e) { console.error('[webhook] done-observer:', e); }
   }, 5000);
+  webhookDoneTimer.unref?.();
 }
 
 /** Stop watching the kanban. Safe to call when not running. */
@@ -5002,6 +5008,7 @@ function startEphemeralWorkerWatcher(): void {
   const dir = spawnRequestsDir();
   if (dir) { try { mkdirSync(dir, { recursive: true }); } catch { /* noop */ } }
   workerWatchTimer = setInterval(() => { void ephemeralWorkerTick(); }, WORKER_TICK_MS);
+  workerWatchTimer.unref?.();
 }
 
 function stopEphemeralWorkerWatcher(): void {
@@ -5220,10 +5227,13 @@ function armAlwaysOnBeats(): void {
   if (fleetTimer) clearInterval(fleetTimer);
   writeFleetSnapshot();
   fleetTimer = setInterval(writeFleetSnapshot, 8_000);
+  fleetTimer.unref?.();
   if (breakerBeatTimer) clearInterval(breakerBeatTimer);
   breakerBeatTimer = setInterval(() => { try { runBreakerBeat(300_000); } catch (e) { console.error('[breaker beat]', e); } }, 30_000);
+  breakerBeatTimer.unref?.();
   if (workerWakeTimer) clearInterval(workerWakeTimer);
   workerWakeTimer = setInterval(() => { try { runWorkerWakeBeat(); } catch (e) { console.error('[worker-wake beat]', e); } }, WORKER_WAKE_POLL_MS);
+  workerWakeTimer.unref?.();
   runWorkerWakeBeat(); // catch-up on arm — power-resume re-arms and drains the backlog
 }
 

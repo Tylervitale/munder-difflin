@@ -125,6 +125,7 @@ export class MemoryReflector {
     // LLM call (and a freshly-restored home isn't condensed before it's mined).
     const ms = Math.max(60_000, this.getSettings().intervalMs);
     this.timer = setInterval(() => { void this.reflectNow(); }, ms);
+    this.timer.unref?.();
   }
 
   stop(): void {
