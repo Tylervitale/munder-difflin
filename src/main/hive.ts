@@ -1706,6 +1706,7 @@ export class HiveManager {
     this.routerTimer = setInterval(() => {
       try { this.routeOnce(); } catch { /* keep the loop alive */ }
     }, intervalMs);
+    this.routerTimer.unref?.();
   }
   stopRouter(): void {
     if (this.routerTimer) { clearInterval(this.routerTimer); this.routerTimer = null; }
