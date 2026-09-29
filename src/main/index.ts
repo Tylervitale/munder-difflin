@@ -3327,7 +3327,9 @@ ipcMain.handle('config:changeHome', async (_evt, payload: unknown) => {
   allowQuit = true;
   writeConfig({ harnessHome: newHome });
   try { ptyManager.killAll(); } catch (e) { console.error('[changeHome] killAll:', e); }
-  app.relaunch();
+  app.relaunch({
+    args: process.argv.slice(1).filter(arg => arg !== '--new-instance')
+  });
   app.exit(0);
   return { ok: true as const }; // unreachable (process exits) — typed for the renderer
 });
@@ -3879,7 +3881,9 @@ ipcMain.handle('app:resetAll', () => {
   // Back to first-run defaults, then relaunch clean so all in-memory services
   // re-bootstrap from scratch and the renderer lands on onboarding.
   resetConfig();
-  app.relaunch();
+  app.relaunch({
+    args: process.argv.slice(1).filter(arg => arg !== '--new-instance')
+  });
   app.exit(0);
 });
 
