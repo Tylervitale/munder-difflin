@@ -70,6 +70,7 @@ import { inboxNudgeText } from '../shared/hiveNudge';
 import { resolveGodName } from '../shared/godIdentity';
 import { fetchHireManifest, readHireManifestFiles } from './hire';
 import { parseHireDeepLink, type HireManifest } from '../shared/hire';
+import { isWindowsMcpRunning } from './windowsMcpStatus';
 import { ClosingTimeController } from './closingTime';
 import {
   argsWithAutoModeFlag,
@@ -4579,6 +4580,7 @@ ipcMain.handle('realtime:setSessionLive', (_e, live: unknown) => {
   return { ok: true };
 });
 // v0.3.4: app self-knowledge for the voice get_app_info tool — version + the
+ipcMain.handle('windowsMcp:status', async () => ({ running: await isWindowsMcpRunning() }));
 // newest CHANGELOG sections. Read-only; ships CHANGELOG.md with the app.
 ipcMain.handle('app:info', () => {
   let changelog = '';

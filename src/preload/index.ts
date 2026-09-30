@@ -785,6 +785,8 @@ const api = {
   stopWorker: (workerId: string): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke('workers:stop', workerId),
 
+  windowsMcpStatus: (): Promise<{ running: boolean }> => ipcRenderer.invoke('windowsMcp:status'),
+
   // ─── Semantic memory (MemPalace CLI) ─────────────────────────────────────
   memoryStatus: (): Promise<MemoryStatus> => ipcRenderer.invoke('hive:memoryStatus'),
   /** Which external tools (uv, mempalace, git, each agent engine) are actually
