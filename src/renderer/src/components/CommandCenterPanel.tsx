@@ -148,6 +148,25 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
     await Promise.all(all.map((a) => window.cth.controlAutoDelivery(a.id, next).catch(() => null)));
   };
 
+  const [windowsMcpRunning, setWindowsMcpRunning] = useState<boolean>(false);
+  useEffect(() => {
+    let alive = true;
+    const poll = async () => {
+      try {
+        const res = await window.cth.windowsMcpStatus();
+        if (alive) setWindowsMcpRunning(res.running);
+      } catch (e) {
+        if (alive) setWindowsMcpRunning(false);
+      }
+    };
+    void poll();
+    const interval = setInterval(poll, 3000);
+    return () => {
+      alive = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <PixelPanel
       variant="default"
@@ -188,6 +207,27 @@ export function CommandCenterPanel({ agent, fullscreen = false }: { agent: Agent
             agent's queue), and the IDE opens from agent level, not the toolbar.
             Short labels — the tooltips carry the full explanation. */}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+          <div
+            className="cth-tip"
+            data-tip={`Windows MCP: ${windowsMcpRunning ? 'Running' : 'Not running'}`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 24,
+              height: 24,
+              background: 'var(--cth-paper-100)',
+              boxShadow: 'inset 0 0 0 1px var(--cth-ink-300)',
+              cursor: 'help'
+            }}
+          >
+            <div style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: windowsMcpRunning ? 'var(--cth-mint)' : 'var(--cth-ink-300)'
+            }} />
+          </div>
           <PixelButton
             variant={floorDeliveryPaused ? 'primary' : 'secondary'}
             size="sm"
