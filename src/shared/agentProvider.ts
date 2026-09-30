@@ -344,7 +344,8 @@ export const AGENT_PROVIDER_PRESETS: AgentProviderPreset[] = [
     initialPromptFlag: '-i',
     // Qwen's long-context coder model for the orchestrator. // TODO-verify
     recommendedOrchestratorModel: 'qwen3-coder-plus',
-    resumeFlag: undefined
+    resumeFlag: undefined,
+    installCommand: 'npm install -g @qwen-code/qwen-code'
   },
   {
     // OpenCode — the TypeScript AI coding agent (opencode.ai / anomalyco/opencode,
@@ -592,7 +593,7 @@ export const AGENT_PROVIDER_PRESETS: AgentProviderPreset[] = [
     initialPromptFlag: '-i',
     recommendedOrchestratorModel: 'nvidia/llama-3.1-nemotron-70b-instruct',
     resumeFlag: undefined,
-    installCommand: 'npm install -g qwen-code'
+    installCommand: 'npm install -g @qwen-code/qwen-code'
   }
 ];
 
