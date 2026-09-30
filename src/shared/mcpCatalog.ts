@@ -109,7 +109,7 @@ export const MCP_CATALOG: McpCatalogEntry[] = [
     id: 'windows',
     label: 'Windows OS',
     description: 'Control and interact with the Windows OS.',
-    spec: { command: 'uvx', args: ['windows-mcp'] },
+    spec: { command: 'uvx', args: ['windows-mcp', 'serve'] },
     tier: 'safe-readonly',
     defaultEnabled: true
   },
