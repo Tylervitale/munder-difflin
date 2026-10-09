@@ -11,6 +11,7 @@ import { CommandCenterPanel } from './CommandCenterPanel';
 import { disposeTerminal } from './terminalPool';
 import { SidebarTabs } from './SidebarTabs';
 import { ThreadsPanel } from './ThreadsPanel';
+import { ChatTab } from './ChatTab';
 import { ToolWaterfall } from './ToolWaterfall';
 import { AgentControlStrip } from './AgentControlStrip';
 import { EditAgentModal } from './EditAgentModal';
@@ -238,6 +239,10 @@ export function AgentDetailPanel({ agent }: AgentDetailPanelProps) {
 
       {/* Active tab body — fills remaining space */}
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+        {sidebarTab === 'chat' && (
+          <ChatTab agent={agent} />
+        )}
+
         {sidebarTab === 'terminal' && (
           isReal && agent.ptyId ? (
             isFullscreenedHere ? (
