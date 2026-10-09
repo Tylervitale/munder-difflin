@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CommandBar } from './CommandBar';
 import { useStore, type Agent } from '@/store/store';
+import { createAnsiStripper } from './ansiText';
 
 // Derive the message shape from the preload-exposed API
 type HiveMessage = Awaited<ReturnType<Window['cth']['hiveInbox']>>[number];
@@ -10,11 +11,66 @@ export interface ChatTabProps {
   agent: Agent;
 }
 
+interface StreamMessage {
+  id: string;
+  type: 'stream';
+  body: string;
+  created_at: string; // ISO string to match HiveMessage
+}
+
 export function ChatTab({ agent }: ChatTabProps) {
   const { t } = useTranslation();
   const [inbox, setInbox] = useState<HiveMessage[]>([]);
   const [outbox, setOutbox] = useState<HiveMessage[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [streamChunks, setStreamChunks] = useState<StreamMessage[]>([]);
+  const stripperRef = useRef(createAnsiStripper());
+
+  useEffect(() => {
+    if (!agent.ptyId) return;
+
+    // We collect chunks of output and periodically flush them into a new StreamMessage.
+    let buffer = '';
+    let flushTimer: any = null;
+
+    const flush = () => {
+      if (!buffer.trim()) return;
+
+      const newMsg: StreamMessage = {
+        id: `stream-${Date.now()}-${Math.random()}`,
+        type: 'stream',
+        body: buffer,
+        created_at: new Date().toISOString()
+      };
+
+      setStreamChunks(prev => {
+        // High limit to avoid deleting history while reading it
+        const next = [...prev, newMsg];
+        if (next.length > 5000) return next.slice(next.length - 5000);
+        return next;
+      });
+      buffer = '';
+    };
+
+    const cleanup = window.cth.onPtyData(agent.ptyId, (data) => {
+      const stripped = stripperRef.current(data);
+      if (stripped) {
+        buffer += stripped;
+        // Debounce flush
+        if (flushTimer) clearTimeout(flushTimer);
+        flushTimer = setTimeout(flush, 500); // Flush if no output for 500ms
+
+        // Or flush if it gets too long
+        if (buffer.length > 1000) flush();
+      }
+    });
+
+    return () => {
+      cleanup();
+      if (flushTimer) clearTimeout(flushTimer);
+      flush(); // final flush
+    };
+  }, [agent.ptyId]);
 
   useEffect(() => {
     let alive = true;
@@ -55,9 +111,11 @@ export function ChatTab({ agent }: ChatTabProps) {
       }
     }
 
-    const sorted = Array.from(unique.values()).sort((a, b) => a.created_at < b.created_at ? -1 : 1);
+    const combined: Array<HiveMessage | StreamMessage> = [...Array.from(unique.values()), ...streamChunks];
+
+    const sorted = combined.sort((a, b) => a.created_at < b.created_at ? -1 : 1);
     return sorted;
-  }, [inbox, outbox]);
+  }, [inbox, outbox, streamChunks]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -65,20 +123,15 @@ export function ChatTab({ agent }: ChatTabProps) {
     }
   }, [messages]);
 
-  const onSend = async (text: string) => {
-    await window.cth.hiveSend({
-      to: agent.id,
-      act: 'inform',
-      subject: 'Chat',
-      body: text
-    }, 'human');
+  const enqueueMessage = useStore((s) => s.enqueueMessage);
 
-    // Optimistic UI update could go here, but the 3-second poll will catch it
-    // Let's force an immediate reload
-    try {
-        const inData = await window.cth.hiveInbox(agent.id);
-        setInbox(inData);
-    } catch {}
+  const onSend = async (text: string) => {
+    if (!text.trim()) return;
+
+    // Instead of using hiveSend directly, we enqueue it exactly as the terminal composer does.
+    // This ensures it goes straight into the agent's PTY/input when ready.
+    enqueueMessage(agent.id, text);
+    void window.cth.trackMessageSent('composer');
   };
 
   return (
@@ -100,11 +153,43 @@ export function ChatTab({ agent }: ChatTabProps) {
           </div>
         ) : (
           messages.map((m) => {
-            const isHuman = m.from === 'human';
+            if ('type' in m && m.type === 'stream') {
+              return (
+                <div key={m.id} style={{ display: 'flex', flexDirection: 'column', maxWidth: '100%' }}>
+                  <div style={{
+                    fontSize: 10,
+                    color: 'var(--cth-ink-500)',
+                    marginBottom: 4,
+                    fontFamily: 'var(--cth-font-display)',
+                    textTransform: 'uppercase'
+                  }}>
+                    Stream • {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  <div style={{
+                    background: 'var(--cth-ink-900)',
+                    color: 'var(--cth-cream-100)',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    maxWidth: '100%',
+                    fontSize: 12,
+                    lineHeight: 1.4,
+                    fontFamily: 'var(--cth-font-mono)',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    overflowX: 'hidden'
+                  }}>
+                    {m.body.trim()}
+                  </div>
+                </div>
+              );
+            }
+
+            const hm = m as HiveMessage;
+            const isHuman = hm.from === 'human';
 
             return (
               <div
-                key={m.id}
+                key={hm.id}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -119,7 +204,7 @@ export function ChatTab({ agent }: ChatTabProps) {
                   fontFamily: 'var(--cth-font-display)',
                   textTransform: 'uppercase'
                 }}>
-                  {isHuman ? 'You' : m.from} • {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {isHuman ? 'You' : hm.from} • {new Date(hm.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
                 <div style={{
                   background: isHuman ? `var(--cth-${agent.accent})` : 'var(--cth-cream-100)',
@@ -137,7 +222,7 @@ export function ChatTab({ agent }: ChatTabProps) {
                   wordBreak: 'break-word',
                   border: isHuman ? 'none' : '1px solid var(--cth-ink-200)'
                 }}>
-                  {m.body}
+                  {hm.body}
                 </div>
               </div>
             );
