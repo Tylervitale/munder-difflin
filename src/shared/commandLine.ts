@@ -12,6 +12,9 @@ export function tokenizeCommand(command: string): string[] {
   const out: string[] = [];
   const re = /"([^"]*)"|'([^']*)'|(\S+)/g;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(command)) !== null) out.push(m[1] ?? m[2] ?? m[3]);
+  while ((m = re.exec(command)) !== null) {
+    if (m.index === re.lastIndex) re.lastIndex++;
+    out.push(m[1] ?? m[2] ?? m[3]);
+  }
   return out;
 }
