@@ -975,6 +975,7 @@ function registerMarkdownLinkProvider(term: Terminal, ptyId: string): void {
         const re = pathTokenMatcher();
         let m: RegExpExecArray | null;
         while ((m = re.exec(text)) !== null) {
+          if (m.index === re.lastIndex) re.lastIndex++;
           const raw = m[0];
           const abs = resolvePathCandidate(ptyId, raw);
           if (!abs) continue;

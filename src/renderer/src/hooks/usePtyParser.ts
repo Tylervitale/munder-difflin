@@ -110,6 +110,7 @@ export function usePtyParser(agentId: string) {
 
     TOOL_RE.lastIndex = 0;
     for (let m: RegExpExecArray | null; (m = TOOL_RE.exec(text)) !== null; ) {
+      if (m.index === TOOL_RE.lastIndex) TOOL_RE.lastIndex++;
       lastTool = m[1];
       lastArg = (m[2] ?? '').trim();
     }
